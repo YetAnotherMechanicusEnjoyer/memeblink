@@ -59,6 +59,7 @@ fn handle_client(client: UnixStream, proxy: &EventLoopProxy<RuntimeEvent>) {
             let runtime_event = RuntimeEvent::InjectMeme {
                 anchor: event.anchor,
                 animation,
+                duration: std::time::Duration::from_millis(event.duration_ms as u64),
             };
             let _ = proxy.send_event(runtime_event);
         } else {

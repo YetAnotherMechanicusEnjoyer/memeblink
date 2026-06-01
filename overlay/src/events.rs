@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::renderer::texture::GifAnimation;
 use shared::models::OverlayAnchor;
 
@@ -6,5 +8,6 @@ pub enum RuntimeEvent {
     InjectMeme {
         anchor: OverlayAnchor,
         animation: GifAnimation,
+        duration: Duration,
     },
 }

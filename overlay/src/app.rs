@@ -2,6 +2,7 @@ use shared::models::OverlayAnchor;
 use std::marker::PhantomData;
 use std::num::NonZeroU32;
 use std::sync::Arc;
+use std::time::Instant;
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
@@ -24,6 +25,7 @@ where
     surface: Option<softbuffer::Surface<Arc<Window>, Arc<Window>>>,
     active_animation: Option<GifAnimation>,
     active_anchor: Option<OverlayAnchor>,
+    expires_at: Option<Instant>,
     _event_marker: PhantomData<T>,
 }
 
@@ -40,6 +42,7 @@ where
             surface: None,
             active_animation: None,
             active_anchor: None,
+            expires_at: None,
             _event_marker: PhantomData,
         }
     }
@@ -144,6 +147,7 @@ where
             RuntimeEvent::InjectMeme {
                 anchor,
                 mut animation,
+                duration,
             } => {
                 animation.reset();
                 let frame = animation.current_frame();
@@ -156,11 +160,34 @@ where
                 }
                 self.active_animation = Some(animation);
                 self.active_anchor = Some(anchor);
+                self.expires_at = Some(Instant::now() + duration);
             }
         }
     }
 
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+        if let Some(expires_at) = self.expires_at
+            && Instant::now() >= expires_at
+        {
+            self.active_animation = None;
+            self.active_anchor = None;
+            self.expires_at = None;
+
+            if let Some(window) = &self.window {
+                if let Some(surface) = &mut self.surface
+                    && let Ok(mut buffer) = surface.buffer_mut()
+                {
+                    buffer.fill(0);
+                    buffer.present().ok();
+                }
+
+                self.platform_engine
+                    .update_anchor(window, OverlayAnchor::TopLeft, 1, 1)
+                    .ok();
+            }
+            return;
+        }
+
         if let Some(animation) = &self.active_animation
             && let Some(ref window) = self.window
         {
