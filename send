@@ -1,0 +1,9 @@
+#!/bin/bash
+
+SOCK_TYPE="UNIX-CONNECT"
+SOCK_PATH="/tmp/memeblink_overlay.sock"
+SOCK="$SOCK_TYPE:$SOCK_PATH"
+
+PAYLOAD="{\"image_path\": \"$1\", \"duration_ms\": $2, \"anchor\": \"$3\"}"
+
+echo "$PAYLOAD" | socat - "$SOCK"
