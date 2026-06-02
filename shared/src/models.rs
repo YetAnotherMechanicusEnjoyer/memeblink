@@ -19,7 +19,6 @@ pub enum SizeConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OverlayEvent {
     pub image_path: String,
-    pub text: Option<String>,
     pub duration_ms: u32,
     pub anchor: OverlayAnchor,
     #[serde(default)]
@@ -30,4 +29,8 @@ pub struct OverlayEvent {
     pub x: Option<i32>,
     #[serde(default)]
     pub y: Option<i32>,
+    pub text: Option<String>,
+    pub text_position: Option<String>,
+    pub text_color: Option<String>,
+    pub text_size: Option<f32>,
 }

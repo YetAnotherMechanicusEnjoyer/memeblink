@@ -12,3 +12,5 @@ serde_json.workspace = true
 image.workspace = true
 softbuffer.workspace = true
 reqwest.workspace = true
+fontdue.workspace = true
+font-kit.workspace = true
