@@ -9,5 +9,7 @@ pub enum RuntimeEvent {
         anchor: OverlayAnchor,
         asset: MediaAsset,
         duration: Duration,
+        custom_x: Option<i32>,
+        custom_y: Option<i32>,
     },
 }

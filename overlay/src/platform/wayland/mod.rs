@@ -46,19 +46,33 @@ impl WaylandOverlayEngine {
 }
 
 impl NativeOverlay for WaylandOverlayEngine {
-    fn initialize_overlay(&self, window: &Window) -> Result<()> {
-        let _display_ptr = self.extract_display_ptr(window)?;
-        let _surface_ptr = self.extract_surface_ptr(window)?;
+    fn initialize_overlay(&self, _window: &Window) -> Result<()> {
+        if std::env::var("HYPRLAND_INSTANCE_SIGNATURE").is_ok() {
+            let rules = [
+                "windowrule = match:class ^(memeblink)$, match:title ^(MemeBlink Overlay)$, float on",
+                "windowrule = match:class ^(memeblink)$, match:title ^(MemeBlink Overlay)$, pin on",
+                "windowrule = match:class ^(memeblink)$, match:title ^(MemeBlink Overlay)$, no_focus on",
+                "windowrule = match:class ^(memeblink)$, match:title ^(MemeBlink Overlay)$, no_shadow on",
+                "windowrule = match:class ^(memeblink)$, match:title ^(MemeBlink Overlay)$, no_anim on",
+                "windowrule = match:class ^(memeblink)$, match:title ^(MemeBlink Overlay)$, no_blur on",
+                "windowrule = match:class ^(memeblink)$, match:title ^(MemeBlink Overlay)$, border_size 0",
+            ];
+            for rule in rules {
+                Command::new("hyprctl")
+                    .args(["keyword", rule])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status()
+                    .ok();
+            }
+        }
         Ok(())
     }
 
     fn configure_input_passthrough(&self, window: &Window, enable_passthrough: bool) -> Result<()> {
         let hittest_active = !enable_passthrough;
         window.set_cursor_hittest(hittest_active).map_err(|e| {
-            MemeBlinkError::WaylandInitialization(format!(
-                "Failed to set cursor hittest to {}: {}",
-                hittest_active, e
-            ))
+            MemeBlinkError::WaylandInitialization(format!("Failed to set cursor hittest: {}", e))
         })?;
         Ok(())
     }
@@ -69,6 +83,8 @@ impl NativeOverlay for WaylandOverlayEngine {
         anchor: OverlayAnchor,
         target_width: u32,
         target_height: u32,
+        custom_x: Option<i32>,
+        custom_y: Option<i32>,
     ) -> Result<()> {
         let monitor = window
             .current_monitor()
@@ -76,14 +92,12 @@ impl NativeOverlay for WaylandOverlayEngine {
             .or_else(|| window.available_monitors().next());
 
         let Some(monitor) = monitor else {
-            println!("Erreur : No monitor detected!");
             return Ok(());
         };
-
         let monitor_size = monitor.size();
         let monitor_pos = monitor.position();
 
-        let (target_x, target_y) = match anchor {
+        let (mut target_x, mut target_y) = match anchor {
             OverlayAnchor::TopLeft => (monitor_pos.x, monitor_pos.y),
             OverlayAnchor::TopRight => (
                 monitor_pos.x + monitor_size.width.saturating_sub(target_width) as i32,
@@ -103,6 +117,13 @@ impl NativeOverlay for WaylandOverlayEngine {
             ),
         };
 
+        if let Some(cx) = custom_x {
+            target_x = monitor_pos.x + cx;
+        }
+        if let Some(cy) = custom_y {
+            target_y = monitor_pos.y + cy;
+        }
+
         if std::env::var("HYPRLAND_INSTANCE_SIGNATURE").is_ok() {
             let resize_args = format!(
                 "exact {} {},title:MemeBlink Overlay",
@@ -110,12 +131,10 @@ impl NativeOverlay for WaylandOverlayEngine {
             );
             let move_args = format!("exact {} {},title:MemeBlink Overlay", target_x, target_y);
 
-            let mut success = false;
             for _ in 0..3 {
                 let output = Command::new("hyprctl")
                     .args(["dispatch", "resizewindowpixel", &resize_args])
                     .output();
-
                 if let Ok(out) = output {
                     let stderr = String::from_utf8_lossy(&out.stderr);
                     let stdout = String::from_utf8_lossy(&out.stdout);
@@ -126,22 +145,16 @@ impl NativeOverlay for WaylandOverlayEngine {
                             .stdout(Stdio::null())
                             .status()
                             .ok();
-                        success = true;
                         break;
                     }
                 }
                 std::thread::sleep(std::time::Duration::from_millis(50));
-            }
-
-            if !success {
-                println!("Hyprland didn't find the window.");
             }
         } else {
             let _ = window
                 .request_inner_size(winit::dpi::PhysicalSize::new(target_width, target_height));
             window.set_outer_position(winit::dpi::PhysicalPosition::new(target_x, target_y));
         }
-
         Ok(())
     }
 }

@@ -13,5 +13,7 @@ pub trait NativeOverlay {
         anchor: OverlayAnchor,
         target_width: u32,
         target_height: u32,
+        custom_x: Option<i32>,
+        custom_y: Option<i32>,
     ) -> Result<()>;
 }

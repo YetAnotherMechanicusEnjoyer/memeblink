@@ -55,11 +55,13 @@ fn handle_client(client: UnixStream, proxy: &EventLoopProxy<RuntimeEvent>) {
         && bytes_read <= MAX_IPC_PAYLOAD_BYTES
         && let Ok(event) = serde_json::from_str::<OverlayEvent>(&buffer)
     {
-        if let Ok(asset) = fetch_and_decode_asset(&event.image_path) {
+        if let Ok(asset) = fetch_and_decode_asset(&event.image_path, event.width, event.height) {
             let runtime_event = RuntimeEvent::InjectMeme {
                 anchor: event.anchor,
                 asset,
                 duration: std::time::Duration::from_millis(event.duration_ms as u64),
+                custom_x: event.x,
+                custom_y: event.y,
             };
             let _ = proxy.send_event(runtime_event);
         } else {

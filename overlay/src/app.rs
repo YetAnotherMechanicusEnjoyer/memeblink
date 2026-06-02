@@ -25,6 +25,8 @@ where
     surface: Option<softbuffer::Surface<Arc<Window>, Arc<Window>>>,
     active_asset: Option<MediaAsset>,
     active_anchor: Option<OverlayAnchor>,
+    custom_x: Option<i32>,
+    custom_y: Option<i32>,
     expires_at: Option<Instant>,
     _event_marker: PhantomData<T>,
 }
@@ -42,6 +44,8 @@ where
             surface: None,
             active_asset: None,
             active_anchor: None,
+            custom_x: None,
+            custom_y: None,
             expires_at: None,
             _event_marker: PhantomData,
         }
@@ -74,16 +78,11 @@ where
         buffer.fill(0);
 
         let frame = asset.current_frame();
-        let target_x = 0;
-        let target_y = 0;
-
         for row in 0..frame.height {
-            let surface_row = row + target_y;
-            if surface_row >= size.height {
+            if row >= size.height {
                 break;
             }
-
-            let surface_idx = (surface_row * size.width + target_x) as usize;
+            let surface_idx = (row * size.width) as usize;
             let texture_idx = (row * frame.width) as usize;
             let copy_len = (frame.width as usize).min(buffer.len() - surface_idx);
 
@@ -121,7 +120,6 @@ where
             let _ = self
                 .platform_engine
                 .configure_input_passthrough(&new_window, true);
-
             let window_arc = Arc::new(new_window);
 
             if let Ok(context) = softbuffer::Context::new(window_arc.clone())
@@ -148,18 +146,29 @@ where
                 anchor,
                 mut asset,
                 duration,
+                custom_x,
+                custom_y,
             } => {
                 asset.reset();
                 let frame = asset.current_frame();
 
                 if let Some(ref window) = self.window {
                     self.platform_engine
-                        .update_anchor(window, anchor, frame.width, frame.height)
+                        .update_anchor(
+                            window,
+                            anchor,
+                            frame.width,
+                            frame.height,
+                            custom_x,
+                            custom_y,
+                        )
                         .ok();
                     window.request_redraw();
                 }
                 self.active_asset = Some(asset);
                 self.active_anchor = Some(anchor);
+                self.custom_x = custom_x;
+                self.custom_y = custom_y;
                 self.expires_at = Some(Instant::now() + duration);
             }
         }
@@ -171,6 +180,8 @@ where
         {
             self.active_asset = None;
             self.active_anchor = None;
+            self.custom_x = None;
+            self.custom_y = None;
             self.expires_at = None;
 
             if let Some(window) = &self.window {
@@ -178,11 +189,10 @@ where
                     && let Ok(mut buffer) = surface.buffer_mut()
                 {
                     buffer.fill(0);
-                    buffer.present().ok();
+                    let _ = buffer.present();
                 }
-
                 self.platform_engine
-                    .update_anchor(window, OverlayAnchor::TopLeft, 1, 1)
+                    .update_anchor(window, OverlayAnchor::TopLeft, 1, 1, None, None)
                     .ok();
             }
             return;
@@ -193,12 +203,17 @@ where
         {
             if let Some(anchor) = self.active_anchor {
                 let frame = asset.current_frame();
-
                 self.platform_engine
-                    .update_anchor(window, anchor, frame.width, frame.height)
+                    .update_anchor(
+                        window,
+                        anchor,
+                        frame.width,
+                        frame.height,
+                        self.custom_x,
+                        self.custom_y,
+                    )
                     .ok();
             }
-
             window.request_redraw();
         }
     }
