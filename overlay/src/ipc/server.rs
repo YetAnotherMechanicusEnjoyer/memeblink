@@ -4,7 +4,7 @@ use std::thread;
 
 use crate::constants::{IPC_SOCKET_ADDRESS, MAX_IPC_PAYLOAD_BYTES};
 use crate::events::RuntimeEvent;
-use crate::renderer::decoder::decode_gif_file;
+use crate::renderer::decoder::fetch_and_decode_asset;
 use shared::error::{MemeBlinkError, Result};
 use shared::models::OverlayEvent;
 use winit::event_loop::EventLoopProxy;
@@ -31,7 +31,7 @@ fn run_listener_loop(proxy: EventLoopProxy<RuntimeEvent>) -> Result<()> {
         })?;
 
     println!(
-        "[MemeBlink IPC] Serveur en écoute sur {}",
+        "[MemeBlink IPC] Server listening on socket: {}",
         IPC_SOCKET_ADDRESS
     );
     log::info!("IPC Server listening on filesystem socket.");
@@ -55,16 +55,16 @@ fn handle_client(client: UnixStream, proxy: &EventLoopProxy<RuntimeEvent>) {
         && bytes_read <= MAX_IPC_PAYLOAD_BYTES
         && let Ok(event) = serde_json::from_str::<OverlayEvent>(&buffer)
     {
-        if let Ok(animation) = decode_gif_file(&event.image_path) {
+        if let Ok(asset) = fetch_and_decode_asset(&event.image_path) {
             let runtime_event = RuntimeEvent::InjectMeme {
                 anchor: event.anchor,
-                animation,
+                asset,
                 duration: std::time::Duration::from_millis(event.duration_ms as u64),
             };
             let _ = proxy.send_event(runtime_event);
         } else {
             eprintln!(
-                "[MemeBlink IPC] Échec du décodage du fichier : {}",
+                "[MemeBlink IPC] Failed to decode image asset: {}",
                 event.image_path
             );
             log::error!("Failed to decode image asset: {}", event.image_path);

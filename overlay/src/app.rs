@@ -13,7 +13,7 @@ use winit::platform::wayland::WindowAttributesExtWayland;
 
 use crate::events::RuntimeEvent;
 use crate::platform::traits::NativeOverlay;
-use crate::renderer::texture::GifAnimation;
+use crate::renderer::texture::MediaAsset;
 
 pub struct MemeBlinkOverlayApp<O, T>
 where
@@ -23,7 +23,7 @@ where
     window: Option<Arc<Window>>,
     context: Option<softbuffer::Context<Arc<Window>>>,
     surface: Option<softbuffer::Surface<Arc<Window>, Arc<Window>>>,
-    active_animation: Option<GifAnimation>,
+    active_asset: Option<MediaAsset>,
     active_anchor: Option<OverlayAnchor>,
     expires_at: Option<Instant>,
     _event_marker: PhantomData<T>,
@@ -40,7 +40,7 @@ where
             window: None,
             context: None,
             surface: None,
-            active_animation: None,
+            active_asset: None,
             active_anchor: None,
             expires_at: None,
             _event_marker: PhantomData,
@@ -51,7 +51,7 @@ where
         let (Some(surface), Some(window)) = (self.surface.as_mut(), self.window.as_ref()) else {
             return;
         };
-        let Some(animation) = self.active_animation.as_ref() else {
+        let Some(asset) = self.active_asset.as_ref() else {
             return;
         };
 
@@ -73,7 +73,7 @@ where
 
         buffer.fill(0);
 
-        let frame = animation.current_frame();
+        let frame = asset.current_frame();
         let target_x = 0;
         let target_y = 0;
 
@@ -146,11 +146,11 @@ where
         match event {
             RuntimeEvent::InjectMeme {
                 anchor,
-                mut animation,
+                mut asset,
                 duration,
             } => {
-                animation.reset();
-                let frame = animation.current_frame();
+                asset.reset();
+                let frame = asset.current_frame();
 
                 if let Some(ref window) = self.window {
                     self.platform_engine
@@ -158,7 +158,7 @@ where
                         .ok();
                     window.request_redraw();
                 }
-                self.active_animation = Some(animation);
+                self.active_asset = Some(asset);
                 self.active_anchor = Some(anchor);
                 self.expires_at = Some(Instant::now() + duration);
             }
@@ -169,7 +169,7 @@ where
         if let Some(expires_at) = self.expires_at
             && Instant::now() >= expires_at
         {
-            self.active_animation = None;
+            self.active_asset = None;
             self.active_anchor = None;
             self.expires_at = None;
 
@@ -188,11 +188,11 @@ where
             return;
         }
 
-        if let Some(animation) = &self.active_animation
+        if let Some(asset) = &self.active_asset
             && let Some(ref window) = self.window
         {
             if let Some(anchor) = self.active_anchor {
-                let frame = animation.current_frame();
+                let frame = asset.current_frame();
 
                 self.platform_engine
                     .update_anchor(window, anchor, frame.width, frame.height)
