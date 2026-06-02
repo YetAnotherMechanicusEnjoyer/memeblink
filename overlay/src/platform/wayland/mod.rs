@@ -49,13 +49,15 @@ impl NativeOverlay for WaylandOverlayEngine {
     fn initialize_overlay(&self, _window: &Window) -> Result<()> {
         if std::env::var("HYPRLAND_INSTANCE_SIGNATURE").is_ok() {
             let rules = [
-                "windowrule = match:class ^(memeblink)$, match:title ^(MemeBlink Overlay)$, float on",
-                "windowrule = match:class ^(memeblink)$, match:title ^(MemeBlink Overlay)$, pin on",
-                "windowrule = match:class ^(memeblink)$, match:title ^(MemeBlink Overlay)$, no_focus on",
-                "windowrule = match:class ^(memeblink)$, match:title ^(MemeBlink Overlay)$, no_shadow on",
-                "windowrule = match:class ^(memeblink)$, match:title ^(MemeBlink Overlay)$, no_anim on",
-                "windowrule = match:class ^(memeblink)$, match:title ^(MemeBlink Overlay)$, no_blur on",
-                "windowrule = match:class ^(memeblink)$, match:title ^(MemeBlink Overlay)$, border_size 0",
+                "windowrule = match:class memeblink, match:title MemeBlink Overlay, float on",
+                "windowrule = match:class memeblink, match:title MemeBlink Overlay, pin on",
+                "windowrule = match:class memeblink, match:title MemeBlink Overlay, no_focus on",
+                "windowrule = match:class memeblink, match:title MemeBlink Overlay, no_shadow on",
+                "windowrule = match:class memeblink, match:title MemeBlink Overlay, no_anim on",
+                "windowrule = match:class memeblink, match:title MemeBlink Overlay, no_blur on",
+                "windowrule = match:class memeblink, match:title MemeBlink Overlay, border_size 0",
+                "windowrule = match:class memeblink, match:title MemeBlink Overlay, no_dim on",
+                "windowrule = match:class memeblink, match:title MemeBlink Overlay, opacity 0.999 override 0.999 override",
             ];
             for rule in rules {
                 Command::new("hyprctl")

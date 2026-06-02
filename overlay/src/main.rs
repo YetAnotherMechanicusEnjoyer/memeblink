@@ -13,6 +13,9 @@ use shared::error::{MemeBlinkError, Result};
 use winit::event_loop::{ControlFlow, EventLoop};
 
 fn main() -> Result<()> {
+    unsafe {
+        std::env::set_var("MANGOHUD", "0");
+    }
     log::set_max_level(log::LevelFilter::Info);
 
     let event_loop = EventLoop::<RuntimeEvent>::with_user_event()

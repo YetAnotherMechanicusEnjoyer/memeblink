@@ -76,6 +76,25 @@ fn apply_text(
             .copy_from_slice(&frame.pixels[src..src + frame.width as usize]);
     }
 
+    if text_w > 0 {
+        let bg_y_start = if pos.unwrap_or("below") == "above" {
+            0
+        } else {
+            frame.height
+        };
+        let bg_y_end = bg_y_start + text_h;
+
+        let bg_x_start = ((out_w as i32 - text_w as i32) / 2 - 8).max(0);
+        let bg_x_end = ((out_w as i32 - text_w as i32) / 2 + text_w as i32 + 8).min(out_w as i32);
+
+        for y in bg_y_start..bg_y_end {
+            for x in bg_x_start..bg_x_end {
+                let idx = (y * out_w + x as u32) as usize;
+                pixels[idx] = blend_color(pixels[idx], 0, 0, 0, 128);
+            }
+        }
+    }
+
     let mut cx = (out_w as i32 - text_w as i32) / 2;
     let base_y = if pos.unwrap_or("below") == "above" {
         size as i32
