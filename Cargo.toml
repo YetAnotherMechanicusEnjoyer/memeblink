@@ -1,5 +1,5 @@
 [workspace]
-members = ["overlay", "shared"]
+members = ["dashboard/src-tauri", "overlay", "shared"]
 resolver = "3"
 
 [workspace.package]
