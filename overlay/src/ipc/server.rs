@@ -2,9 +2,9 @@ use std::io::{BufRead, BufReader};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::thread;
 
-use crate::constants::{IPC_SOCKET_ADDRESS, MAX_IPC_PAYLOAD_BYTES};
 use crate::events::RuntimeEvent;
 use crate::renderer::decoder::fetch_and_decode_asset;
+use shared::constants::{IPC_SOCKET_ADDRESS, MAX_IPC_PAYLOAD_BYTES};
 use shared::error::{MemeBlinkError, Result};
 use shared::models::OverlayEvent;
 use winit::event_loop::EventLoopProxy;
