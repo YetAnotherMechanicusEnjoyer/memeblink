@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+:root {
+  font-family: 'Inter', system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #020617;
+  color: #f8fafc;
+}
+
+input, select, button {
+  outline: none;
+}
+
+.preview-grid-bg {
+  background-size: 16px 16px;
+  background-image: linear-gradient(to right, #1e293b 1px, transparent 1px),
+                    linear-gradient(to bottom, #1e293b 1px, transparent 1px);
+}
