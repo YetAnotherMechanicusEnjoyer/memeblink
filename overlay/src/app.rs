@@ -81,7 +81,8 @@ where
             power_preference: wgpu::PowerPreference::LowPower,
             compatible_surface: Some(&surface),
             force_fallback_adapter: false,
-        })).expect("Impossible to find a compatible GPU adapter");
+        }))
+        .expect("Impossible to find a compatible GPU adapter");
 
         let (device, queue) = pollster::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
@@ -90,17 +91,29 @@ where
                 required_limits: wgpu::Limits::default(),
             },
             None,
-        )).expect("Impossible to create WGPU device");
+        ))
+        .expect("Impossible to create WGPU device");
 
         let capabilities = surface.get_capabilities(&adapter);
         let format = capabilities.formats[0];
 
-        let alpha_mode = if capabilities.alpha_modes.contains(&wgpu::CompositeAlphaMode::PreMultiplied) {
+        let alpha_mode = if capabilities
+            .alpha_modes
+            .contains(&wgpu::CompositeAlphaMode::PreMultiplied)
+        {
             wgpu::CompositeAlphaMode::PreMultiplied
-        } else if capabilities.alpha_modes.contains(&wgpu::CompositeAlphaMode::PostMultiplied) {
+        } else if capabilities
+            .alpha_modes
+            .contains(&wgpu::CompositeAlphaMode::PostMultiplied)
+        {
             wgpu::CompositeAlphaMode::PostMultiplied
-        } else {
+        } else if capabilities
+            .alpha_modes
+            .contains(&wgpu::CompositeAlphaMode::Inherit)
+        {
             wgpu::CompositeAlphaMode::Inherit
+        } else {
+            capabilities.alpha_modes[0]
         };
 
         let config = wgpu::SurfaceConfiguration {
@@ -152,27 +165,28 @@ where
             )),
         });
 
-        let texture_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+        let texture_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-            label: Some("MemeBlink Bind Group Layout"),
-        });
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+                label: Some("MemeBlink Bind Group Layout"),
+            });
 
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
@@ -184,11 +198,12 @@ where
             ..Default::default()
         });
 
-        let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("MemeBlink Pipeline Layout"),
-            bind_group_layouts: &[&texture_bind_group_layout],
-            push_constant_ranges: &[],
-        });
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("MemeBlink Pipeline Layout"),
+                bind_group_layouts: &[&texture_bind_group_layout],
+                push_constant_ranges: &[],
+            });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("MemeBlink Render Pipeline"),
@@ -247,28 +262,38 @@ where
         }
 
         if let Some(config) = &mut self.surface_config
-            && (config.width != size.width || config.height != size.height) {
-                config.width = size.width;
-                config.height = size.height;
-                surface.configure(device, config);
+            && (config.width != size.width || config.height != size.height)
+        {
+            config.width = size.width;
+            config.height = size.height;
+            surface.configure(device, config);
         }
 
         let surface_texture = match surface.get_current_texture() {
             Ok(t) => t,
             Err(_) => return,
         };
-        let view = surface_texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let view = surface_texture
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("MemeBlink Render Encoder"),
         });
 
-        let clear_color = wgpu::Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0 };
+        let clear_color = wgpu::Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.0,
+        };
 
         if let Some(asset) = self.active_asset.as_ref() {
             let frame = asset.current_frame();
 
-            if self.meme_texture.is_none() || self.current_texture_size != (frame.width, frame.height) {
+            if self.meme_texture.is_none()
+                || self.current_texture_size != (frame.width, frame.height)
+            {
                 let texture_size = wgpu::Extent3d {
                     width: frame.width,
                     height: frame.height,
@@ -295,7 +320,9 @@ where
                         },
                         wgpu::BindGroupEntry {
                             binding: 1,
-                            resource: wgpu::BindingResource::Sampler(self.sampler.as_ref().unwrap()),
+                            resource: wgpu::BindingResource::Sampler(
+                                self.sampler.as_ref().unwrap(),
+                            ),
                         },
                     ],
                     label: Some("meme_bind_group"),
