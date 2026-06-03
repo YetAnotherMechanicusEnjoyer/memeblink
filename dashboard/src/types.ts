@@ -18,4 +18,6 @@ export interface OverlayState {
   y: number;
   width: number;
   height: number;
+  widthMode: 'custom' | 'auto';
+  heightMode: 'custom' | 'auto';
 }

@@ -1,6 +1,6 @@
 import React from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { DisplayScreen, OverlayTextSettings } from "../types";
+import { DisplayScreen, OverlayState, OverlayTextSettings } from "../types";
 
 interface ControlPanelProps {
   screens: DisplayScreen[];
@@ -12,6 +12,8 @@ interface ControlPanelProps {
   setAssetValue: (val: string) => void;
   duration: number;
   setDuration: (val: number) => void;
+  overlay: OverlayState;
+  setOverlay: React.Dispatch<React.SetStateAction<OverlayState>>;
   textSettings: OverlayTextSettings;
   setTextSettings: React.Dispatch<React.SetStateAction<OverlayTextSettings>>;
   onSubmit: (e: React.FormEvent) => void;
@@ -27,6 +29,8 @@ export function ControlPanel({
   setAssetValue,
   duration,
   setDuration,
+  overlay,
+  setOverlay,
   textSettings,
   setTextSettings,
   onSubmit,
@@ -122,6 +126,48 @@ export function ControlPanel({
         )}
       </div>
 
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Width Control</label>
+          <div className="flex gap-1 bg-slate-950 p-1 border border-slate-800">
+            <button
+              type="button"
+              className={`flex-1 py-1 text-[11px] uppercase font-medium transition-colors ${overlay.widthMode === "custom" ? "bg-slate-800 text-cyan-400" : "text-slate-500"}`}
+              onClick={() => setOverlay(prev => ({ ...prev, widthMode: "custom" }))}
+            >
+              Manual
+            </button>
+            <button
+              type="button"
+              className={`flex-1 py-1 text-[11px] uppercase font-medium transition-colors ${overlay.widthMode === "auto" ? "bg-slate-800 text-cyan-400" : "text-slate-500"}`}
+              onClick={() => setOverlay(prev => ({ ...prev, widthMode: "auto" }))}
+            >
+              Auto
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Height Control</label>
+          <div className="flex gap-1 bg-slate-950 p-1 border border-slate-800">
+            <button
+              type="button"
+              className={`flex-1 py-1 text-[11px] uppercase font-medium transition-colors ${overlay.heightMode === "custom" ? "bg-slate-800 text-cyan-400" : "text-slate-500"}`}
+              onClick={() => setOverlay(prev => ({ ...prev, heightMode: "custom" }))}
+            >
+              Manual
+            </button>
+            <button
+              type="button"
+              className={`flex-1 py-1 text-[11px] uppercase font-medium transition-colors ${overlay.heightMode === "auto" ? "bg-slate-800 text-cyan-400" : "text-slate-500"}`}
+              onClick={() => setOverlay(prev => ({ ...prev, heightMode: "auto" }))}
+            >
+              Auto
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Duration (ms)</label>
         <input
@@ -163,9 +209,8 @@ export function ControlPanel({
                   value={textSettings.position}
                   onChange={(e) => setTextSettings((prev) => ({ ...prev, position: e.target.value as any }))}
                 >
-                  <option value="top">Top</option>
-                  <option value="center">Center</option>
-                  <option value="bottom">Bottom</option>
+                  <option value="above">Above</option>
+                  <option value="below">Below</option>
                 </select>
               </div>
               <div className="flex flex-col gap-1">

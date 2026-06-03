@@ -6,9 +6,18 @@ interface ScreenPreviewProps {
   overlay: OverlayState;
   setOverlay: React.Dispatch<React.SetStateAction<OverlayState>>;
   textSettings: OverlayTextSettings;
+  computedWidth: number;
+  computedHeight: number;
 }
 
-export function ScreenPreview({ screen, overlay, setOverlay, textSettings }: ScreenPreviewProps) {
+export function ScreenPreview({
+  screen,
+  overlay,
+  setOverlay,
+  textSettings,
+  computedWidth,
+  computedHeight,
+}: ScreenPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [previewWidth, setPreviewWidth] = useState(0);
   const [interaction, setInteraction] = useState<{
@@ -51,8 +60,8 @@ export function ScreenPreview({ screen, overlay, setOverlay, textSettings }: Scr
       startY: e.clientY,
       startOverlayX: overlay.x,
       startOverlayY: overlay.y,
-      startWidth: overlay.width,
-      startHeight: overlay.height,
+      startWidth: computedWidth,
+      startHeight: computedHeight,
     });
   };
 
@@ -63,13 +72,23 @@ export function ScreenPreview({ screen, overlay, setOverlay, textSettings }: Scr
     const deltaY = (e.clientY - interaction.startY) / scale;
 
     if (interaction.type === "drag") {
-      const nextX = Math.max(0, Math.min(screen.width - overlay.width, interaction.startOverlayX + deltaX));
-      const nextY = Math.max(0, Math.min(screen.height - overlay.height, interaction.startOverlayY + deltaY));
+      const nextX = Math.max(0, Math.min(screen.width - computedWidth, interaction.startOverlayX + deltaX));
+      const nextY = Math.max(0, Math.min(screen.height - computedHeight, interaction.startOverlayY + deltaY));
       setOverlay((prev) => ({ ...prev, x: Math.round(nextX), y: Math.round(nextY) }));
     } else if (interaction.type === "resize") {
-      const nextW = Math.max(40, Math.min(screen.width - overlay.x, interaction.startWidth + deltaX));
-      const nextH = Math.max(40, Math.min(screen.height - overlay.y, interaction.startHeight + deltaY));
-      setOverlay((prev) => ({ ...prev, width: Math.round(nextW), height: Math.round(nextH) }));
+      const nextW = overlay.widthMode === "auto"
+        ? interaction.startWidth
+        : Math.max(40, Math.min(screen.width - overlay.x, interaction.startWidth + deltaX));
+
+      const nextH = overlay.heightMode === "auto"
+        ? interaction.startHeight
+        : Math.max(40, Math.min(screen.height - overlay.y, interaction.startHeight + deltaY));
+
+      setOverlay((prev) => ({
+        ...prev,
+        width: Math.round(nextW),
+        height: Math.round(nextH),
+      }));
     }
   };
 
@@ -81,7 +100,14 @@ export function ScreenPreview({ screen, overlay, setOverlay, textSettings }: Scr
 
   return (
     <div className="flex flex-col gap-2 w-full">
-      <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Interactive Display Preview</span>
+      <div className="flex justify-between items-center">
+        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Interactive Display Preview</span>
+        <div className="flex gap-4 text-[11px] font-mono text-cyan-400">
+          <span>W: {computedWidth}px {overlay.widthMode === "auto" && "(AUTO)"}</span>
+          <span>H: {computedHeight}px {overlay.heightMode === "auto" && "(AUTO)"}</span>
+        </div>
+      </div>
+
       <div
         ref={containerRef}
         className="relative w-full border border-slate-800 bg-slate-950 preview-grid-bg overflow-hidden select-none"
@@ -92,8 +118,8 @@ export function ScreenPreview({ screen, overlay, setOverlay, textSettings }: Scr
           style={{
             left: `${overlay.x * scale}px`,
             top: `${overlay.y * scale}px`,
-            width: `${overlay.width * scale}px`,
-            height: `${overlay.height * scale}px`,
+            width: `${computedWidth * scale}px`,
+            height: `${computedHeight * scale}px`,
           }}
           onPointerDown={(e) => handlePointerDown(e, "drag")}
           onPointerMove={handlePointerMove}
@@ -117,12 +143,14 @@ export function ScreenPreview({ screen, overlay, setOverlay, textSettings }: Scr
             </span>
           )}
 
-          <div
-            className="absolute bottom-0 right-0 w-3 h-3 bg-cyan-500 cursor-se-resize border border-slate-950"
-            onPointerDown={(e) => handlePointerDown(e, "resize")}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-          />
+          {!(overlay.widthMode === "auto" && overlay.heightMode === "auto") && (
+            <div
+              className="absolute bottom-0 right-0 w-3 h-3 bg-cyan-500 cursor-se-resize border border-slate-950"
+              onPointerDown={(e) => handlePointerDown(e, "resize")}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+            />
+          )}
         </div>
       </div>
     </div>

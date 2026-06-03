@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useState, useEffect } from "react";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { DisplayScreen, OverlayState, OverlayTextSettings } from "./types";
 import { ScreenPreview } from "./components/ScreenPreview";
 import { ControlPanel } from "./components/ControlPanel";
@@ -16,12 +16,20 @@ export default function App() {
   const [assetSource, setAssetSource] = useState<"path" | "url">("path");
   const [assetValue, setAssetValue] = useState("");
   const [duration, setDuration] = useState(3000);
+  const [status, setStatus] = useState<{ message: string; isError: boolean } | null>(null);
+
+  const [naturalDimensions, setNaturalDimensions] = useState<{ width: number; height: number }>({
+    width: 300,
+    height: 300,
+  });
 
   const [overlay, setOverlay] = useState<OverlayState>({
     x: 100,
     y: 100,
     width: 300,
     height: 300,
+    widthMode: "custom",
+    heightMode: "custom",
   });
 
   const [textSettings, setTextSettings] = useState<OverlayTextSettings>({
@@ -32,14 +40,53 @@ export default function App() {
     size: 24,
   });
 
-  const [status, setStatus] = useState<{ message: string; isError: boolean } | null>(null);
+  useEffect(() => {
+    if (!assetValue) return;
+
+    const img = new Image();
+
+    const handleLoad = () => {
+      if (img.naturalWidth && img.naturalHeight) {
+        setNaturalDimensions({
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        });
+      }
+    };
+
+    img.addEventListener("load", handleLoad);
+
+    if (assetSource === "path") {
+      img.src = convertFileSrc(assetValue);
+    } else {
+      img.src = assetValue;
+    }
+
+    return () => {
+      img.removeEventListener("load", handleLoad);
+    };
+  }, [assetValue, assetSource]);
+
+  let computedWidth = overlay.width;
+  let computedHeight = overlay.height;
+
+  if (overlay.widthMode === "auto" && overlay.heightMode === "auto") {
+    computedWidth = naturalDimensions.width;
+    computedHeight = naturalDimensions.height;
+  } else if (overlay.widthMode === "auto") {
+    const ratio = naturalDimensions.width / naturalDimensions.height;
+    computedWidth = Math.round(overlay.height * ratio);
+  } else if (overlay.heightMode === "auto") {
+    const ratio = naturalDimensions.height / naturalDimensions.width;
+    computedHeight = Math.round(overlay.width * ratio);
+  }
 
   const handleScreenChange = (screen: DisplayScreen) => {
     setSelectedScreen(screen);
     setOverlay((prev) => ({
       ...prev,
-      x: Math.min(prev.x, screen.width - prev.width),
-      y: Math.min(prev.y, screen.height - prev.height),
+      x: Math.min(prev.x, screen.width - computedWidth),
+      y: Math.min(prev.y, screen.height - computedHeight),
     }));
   };
 
@@ -51,8 +98,8 @@ export default function App() {
       image_path: assetValue,
       duration_ms: duration,
       anchor: "TopLeft",
-      width: overlay.width,
-      height: overlay.height,
+      width: overlay.widthMode === "auto" ? "auto" : computedWidth,
+      height: overlay.heightMode === "auto" ? "auto" : computedHeight,
       x: overlay.x,
       y: overlay.y,
       text: textSettings.enabled ? textSettings.content : null,
@@ -75,7 +122,7 @@ export default function App() {
       <header className="mb-8 flex items-center justify-between border-b border-slate-800 pb-4">
         <div>
           <h1 className="text-xl font-bold tracking-wider text-slate-100 uppercase">MemeBlink</h1>
-          <p className="text-xs text-slate-500 tracking-wide">Control Operations Panel</p>
+          <p className="text-xs text-slate-500 tracking-wide">Dashboard</p>
         </div>
         {status && (
           <div className={`px-3 py-1.5 text-xs font-mono border ${status.isError ? "bg-red-950/40 text-red-400 border-red-900" : "bg-cyan-950/40 text-cyan-400 border-cyan-900"}`}>
@@ -96,6 +143,8 @@ export default function App() {
             setAssetValue={setAssetValue}
             duration={duration}
             setDuration={setDuration}
+            overlay={overlay}
+            setOverlay={setOverlay}
             textSettings={textSettings}
             setTextSettings={setTextSettings}
             onSubmit={handleSend}
@@ -108,6 +157,8 @@ export default function App() {
             overlay={overlay}
             setOverlay={setOverlay}
             textSettings={textSettings}
+            computedWidth={computedWidth}
+            computedHeight={computedHeight}
           />
         </div>
       </div>
