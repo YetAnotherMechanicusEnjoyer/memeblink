@@ -6,9 +6,9 @@ import { ControlPanel } from "./components/ControlPanel";
 import "./App.css";
 
 const AVAILABLE_SCREENS: DisplayScreen[] = [
-  { id: "screen_1", name: "Display 1 (1920x1080)", width: 1920, height: 1080 },
-  { id: "screen_2", name: "Display 2 (2560x1440)", width: 2560, height: 1440 },
-  { id: "screen_3", name: "Display 3 (3840x2160)", width: 3840, height: 2160 },
+  { id: "screen_1", name: "Full HD (1920x1080)", width: 1920, height: 1080 },
+  { id: "screen_2", name: "2k QHD (2560x1440)", width: 2560, height: 1440 },
+  { id: "screen_3", name: "4k UHD (3840x2160)", width: 3840, height: 2160 },
 ];
 
 export default function App() {
