@@ -2,7 +2,9 @@ import React, { useState, useRef, useEffect } from "react";
 import { DisplayScreen, OverlayState, OverlayTextSettings } from "../types";
 
 interface ScreenPreviewProps {
-  screen: DisplayScreen;
+  screens: DisplayScreen[];
+  selectedScreen: DisplayScreen;
+  onScreenChange: (screen: DisplayScreen) => void;
   overlay: OverlayState;
   setOverlay: React.Dispatch<React.SetStateAction<OverlayState>>;
   textSettings: OverlayTextSettings;
@@ -11,7 +13,9 @@ interface ScreenPreviewProps {
 }
 
 export function ScreenPreview({
-  screen,
+  screens,
+  selectedScreen,
+  onScreenChange,
   overlay,
   setOverlay,
   textSettings,
@@ -38,8 +42,8 @@ export function ScreenPreview({
     startHeight: 0,
   });
 
-  const scale = previewWidth / screen.width;
-  const previewHeight = screen.height * scale;
+  const scale = previewWidth / selectedScreen.width;
+  const previewHeight = selectedScreen.height * scale;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -72,17 +76,17 @@ export function ScreenPreview({
     const deltaY = (e.clientY - interaction.startY) / scale;
 
     if (interaction.type === "drag") {
-      const nextX = Math.max(0, Math.min(screen.width - computedWidth, interaction.startOverlayX + deltaX));
-      const nextY = Math.max(0, Math.min(screen.height - computedHeight, interaction.startOverlayY + deltaY));
+      const nextX = Math.max(0, Math.min(selectedScreen.width - computedWidth, interaction.startOverlayX + deltaX));
+      const nextY = Math.max(0, Math.min(selectedScreen.height - computedHeight, interaction.startOverlayY + deltaY));
       setOverlay((prev) => ({ ...prev, x: Math.round(nextX), y: Math.round(nextY) }));
     } else if (interaction.type === "resize") {
       const nextW = overlay.widthMode === "auto"
         ? interaction.startWidth
-        : Math.max(40, Math.min(screen.width - overlay.x, interaction.startWidth + deltaX));
+        : Math.max(40, Math.min(selectedScreen.width - overlay.x, interaction.startWidth + deltaX));
 
       const nextH = overlay.heightMode === "auto"
         ? interaction.startHeight
-        : Math.max(40, Math.min(screen.height - overlay.y, interaction.startHeight + deltaY));
+        : Math.max(40, Math.min(selectedScreen.height - overlay.y, interaction.startHeight + deltaY));
 
       setOverlay((prev) => ({
         ...prev,
@@ -99,7 +103,24 @@ export function ScreenPreview({
   };
 
   return (
-    <div className="flex flex-col gap-2 w-full">
+    <div className="flex flex-col gap-2 w-full bg-slate-900 border border-slate-800 p-6">
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Target Display</label>
+        <select
+          className="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm text-slate-200 focus:border-cyan-500 transition-colors cursor-pointer"
+          value={selectedScreen.id}
+          onChange={(e) => {
+            const sc = screens.find((s) => s.id === e.target.value);
+            if (sc) onScreenChange(sc);
+          }}
+        >
+          {screens.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="flex justify-between items-center">
         <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Interactive Display Preview</span>
         <div className="flex gap-4 text-[11px] font-mono text-cyan-400">

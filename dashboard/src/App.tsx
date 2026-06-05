@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { DisplayScreen, OverlayState, OverlayTextSettings } from "./types";
 import { ScreenPreview } from "./components/ScreenPreview";
-import { ControlPanel } from "./components/ControlPanel";
 import "./App.css";
+import { MatrixPanel } from "./components/MatrixPanel";
+import { MemeSender } from "./components/MemeSender";
 
 const AVAILABLE_SCREENS: DisplayScreen[] = [
   { id: "screen_1", name: "Full HD (1920x1080)", width: 1920, height: 1080 },
@@ -13,10 +15,14 @@ const AVAILABLE_SCREENS: DisplayScreen[] = [
 
 export default function App() {
   const [selectedScreen, setSelectedScreen] = useState<DisplayScreen>(AVAILABLE_SCREENS[0]);
-  const [assetSource, setAssetSource] = useState<"path" | "url">("path");
-  const [assetValue, setAssetValue] = useState("");
-  const [duration, setDuration] = useState(3000);
+  const [assetSource, _setAssetSource] = useState<"path" | "url">("path");
+  const [assetValue, _setAssetValue] = useState("");
+  const [duration, _setDuration] = useState(3000);
   const [status, setStatus] = useState<{ message: string; isError: boolean } | null>(null);
+
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const [matrixRoomId, setMatrixRoomId] = useState("");
 
   const [naturalDimensions, setNaturalDimensions] = useState<{ width: number; height: number }>({
     width: 300,
@@ -32,13 +38,46 @@ export default function App() {
     heightMode: "custom",
   });
 
-  const [textSettings, setTextSettings] = useState<OverlayTextSettings>({
+  const [textSettings, _setTextSettings] = useState<OverlayTextSettings>({
     enabled: false,
     content: "SAMPLE TEXT",
     position: "above",
     color: "#ffffff",
     size: 24,
   });
+
+  useEffect(() => {
+    const unlisten = listen("matrix_meme_received", async (event: any) => {
+      const matrixData = event.payload;
+
+      setStatus({ message: `Message reçu de Matrix (${matrixData.sender})`, isError: false });
+
+      const payload = {
+        image_path: matrixData.image_path || "",
+        duration_ms: matrixData.duration_ms || 3000,
+        anchor: "TopLeft",
+        width: matrixData.width || "auto",
+        height: matrixData.height || "auto",
+        x: overlay.x,
+        y: overlay.y,
+        text: matrixData.text || null,
+        text_position: "above",
+        text_color: matrixData.text_color || "#ffffff",
+        text_size: 24,
+      };
+
+      try {
+        await invoke("inject_meme", { event: payload });
+        setTimeout(() => setStatus(null), 3000);
+      } catch (error) {
+        setStatus({ message: `Erreur overlay Matrix: ${error}`, isError: true });
+      }
+    });
+
+    return () => {
+      unlisten.then(f => f());
+    };
+  }, [overlay.x, overlay.y]);
 
   useEffect(() => {
     if (!assetValue) return;
@@ -131,9 +170,18 @@ export default function App() {
         )}
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-5">
-          <ControlPanel
+      {successMsg === null ? (
+        <div className="max-w-lg">
+          <MatrixPanel roomId={matrixRoomId} setRoomId={setMatrixRoomId} setSuccessMsg={setSuccessMsg} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="lg:col-span-4">
+            <div className="p-3 text-xs text-emerald-400 bg-emerald-950/30 border border-emerald-900/50">
+              ✓ {successMsg}
+            </div>
+
+            {/*<ControlPanel
             screens={AVAILABLE_SCREENS}
             selectedScreen={selectedScreen}
             onScreenChange={handleScreenChange}
@@ -148,20 +196,24 @@ export default function App() {
             textSettings={textSettings}
             setTextSettings={setTextSettings}
             onSubmit={handleSend}
-          />
-        </div>
+          />*/}
+            <MemeSender currentRoomId={matrixRoomId} />
+          </div>
 
-        <div className="lg:col-span-7 bg-slate-900 border border-slate-800 p-6">
-          <ScreenPreview
-            screen={selectedScreen}
-            overlay={overlay}
-            setOverlay={setOverlay}
-            textSettings={textSettings}
-            computedWidth={computedWidth}
-            computedHeight={computedHeight}
-          />
+          <div className="lg:col-span-8">
+            <ScreenPreview
+              screens={AVAILABLE_SCREENS}
+              selectedScreen={selectedScreen}
+              onScreenChange={handleScreenChange}
+              overlay={overlay}
+              setOverlay={setOverlay}
+              textSettings={textSettings}
+              computedWidth={computedWidth}
+              computedHeight={computedHeight}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
